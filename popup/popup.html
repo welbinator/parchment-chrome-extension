@@ -7,15 +7,21 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --primary: #2bcaaa;
+      --primary-dark: #22a98d;
+      --primary-fg: #0a2e28;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       width: 320px;
-      background: #faf9f7;
+      background: #f5f9f8;
       color: #1a1a1a;
     }
 
     .header {
-      background: #2c2c2c;
+      background: var(--primary);
       padding: 14px 16px;
       display: flex;
       align-items: center;
@@ -30,7 +36,7 @@
     .header h1 {
       font-size: 15px;
       font-weight: 600;
-      color: #fff;
+      color: var(--primary-fg);
       letter-spacing: 0.01em;
     }
 
@@ -39,14 +45,14 @@
       background: none;
       border: none;
       cursor: pointer;
-      color: #aaa;
+      color: rgba(10,46,40,0.6);
       font-size: 18px;
       padding: 2px 4px;
       border-radius: 4px;
       line-height: 1;
     }
 
-    .header .settings-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .header .settings-btn:hover { color: var(--primary-fg); background: rgba(0,0,0,0.1); }
 
     .body { padding: 16px; }
 
@@ -73,8 +79,8 @@
     .status-detecting p { font-size: 13px; color: #666; margin-top: 10px; }
     .spinner {
       width: 36px; height: 36px;
-      border: 3px solid #e0dbd3;
-      border-top-color: #c97c3a;
+      border: 3px solid #d0ede8;
+      border-top-color: var(--primary);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       margin: 0 auto 10px;
@@ -94,8 +100,8 @@
       display: inline-block;
       margin-top: 12px;
       padding: 7px 16px;
-      background: #c97c3a;
-      color: #fff;
+      background: var(--primary);
+      color: var(--primary-fg);
       border: none;
       border-radius: 6px;
       font-size: 13px;
@@ -103,7 +109,7 @@
       cursor: pointer;
       text-decoration: none;
     }
-    .status-success .open-btn:hover { background: #b36a2a; }
+    .status-success .open-btn:hover { background: var(--primary-dark); }
 
     /* Error */
     .status-error .icon { font-size: 36px; margin-bottom: 10px; }
@@ -124,8 +130,8 @@
     .save-btn {
       width: 100%;
       padding: 11px;
-      background: #c97c3a;
-      color: #fff;
+      background: var(--primary);
+      color: var(--primary-fg);
       border: none;
       border-radius: 8px;
       font-size: 14px;
@@ -134,7 +140,7 @@
       letter-spacing: 0.02em;
       transition: background 0.15s;
     }
-    .save-btn:hover { background: #b36a2a; }
+    .save-btn:hover { background: var(--primary-dark); }
     .save-btn:disabled { background: #ccc; cursor: not-allowed; }
 
     .source-badge {

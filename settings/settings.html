@@ -4,11 +4,17 @@
   <meta charset="UTF-8" />
   <title>Parchment — Settings</title>
   <style>
+    :root {
+      --primary: #2bcaaa;
+      --primary-dark: #22a98d;
+      --primary-fg: #0a2e28;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #faf9f7;
+      background: #f5f9f8;
       color: #1a1a1a;
       max-width: 640px;
       margin: 0 auto;
@@ -23,7 +29,7 @@
     }
 
     .logo h1 { font-size: 20px; font-weight: 700; }
-    .logo span { color: #c97c3a; }
+    .logo span { color: var(--primary); }
 
     h2 {
       font-size: 13px;
@@ -70,7 +76,7 @@
       transition: border-color 0.15s;
     }
 
-    input:focus, select:focus { border-color: #c97c3a; box-shadow: 0 0 0 3px rgba(201,124,58,0.15); }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(43,202,170,0.2); }
 
     .toggle-row {
       display: flex;
@@ -97,7 +103,7 @@
       background: white; border-radius: 50%;
       transition: 0.2s;
     }
-    input:checked + .slider { background: #c97c3a; }
+    input:checked + .slider { background: var(--primary); }
     input:checked + .slider:before { transform: translateX(20px); }
 
     .ai-fields { display: none; }
@@ -105,8 +111,8 @@
 
     .save-btn {
       padding: 10px 24px;
-      background: #c97c3a;
-      color: #fff;
+      background: var(--primary);
+      color: var(--primary-fg);
       border: none;
       border-radius: 8px;
       font-size: 14px;
@@ -115,7 +121,7 @@
       margin-top: 8px;
       transition: background 0.15s;
     }
-    .save-btn:hover { background: #b36a2a; }
+    .save-btn:hover { background: var(--primary-dark); }
 
     .toast {
       display: none;
@@ -158,7 +164,7 @@
     }
 
     .model-option input[type="radio"] { accent-color: #c97c3a; }
-    .model-option:has(input:checked) { border-color: #c97c3a; background: #fff8f2; }
+    .model-option:has(input:checked) { border-color: var(--primary); background: #f0fdf9; }
 
     .model-name { font-weight: 600; }
     .model-desc { font-size: 11px; color: #888; }
