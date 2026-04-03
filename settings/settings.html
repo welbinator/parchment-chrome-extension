@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parchment — Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #faf9f7;
+      color: #1a1a1a;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .logo h1 { font-size: 20px; font-weight: 700; }
+    .logo span { color: #c97c3a; }
+
+    h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 12px;
+      margin-top: 32px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e8e3dc;
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    .field { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+      color: #1a1a1a;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus { border-color: #c97c3a; box-shadow: 0 0 0 3px rgba(201,124,58,0.15); }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+
+    .toggle-row .label-group label { margin-bottom: 2px; }
+
+    /* Toggle switch */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc; border-radius: 24px;
+      transition: 0.2s;
+    }
+    .slider:before {
+      position: absolute; content: '';
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: white; border-radius: 50%;
+      transition: 0.2s;
+    }
+    input:checked + .slider { background: #c97c3a; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .ai-fields { display: none; }
+    .ai-fields.visible { display: block; }
+
+    .save-btn {
+      padding: 10px 24px;
+      background: #c97c3a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .save-btn:hover { background: #b36a2a; }
+
+    .toast {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .toast.success { background: #eafaf1; color: #27ae60; display: block; }
+    .toast.error { background: #fdecea; color: #c0392b; display: block; }
+
+    .paywall-note {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #fffbf0;
+      border: 1px solid #f0e0b0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #7a6030;
+      line-height: 1.5;
+    }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .model-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 2px solid #e0dbd3;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color 0.15s;
+    }
+
+    .model-option input[type="radio"] { accent-color: #c97c3a; }
+    .model-option:has(input:checked) { border-color: #c97c3a; background: #fff8f2; }
+
+    .model-name { font-weight: 600; }
+    .model-desc { font-size: 11px; color: #888; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">
+    <h1>📜 Parchment <span>Settings</span></h1>
+  </div>
+
+  <!-- Parchment API -->
+  <h2>Parchment Account</h2>
+  <div class="field">
+    <label for="parchmentApiKey">API Key</label>
+    <p class="hint">Find this in Parchment → Settings → API. Your key starts with <code>pmt_</code>.</p>
+    <input type="password" id="parchmentApiKey" placeholder="pmt_..." autocomplete="off" />
+  </div>
+
+  <!-- AI Features -->
+  <h2>AI Features</h2>
+
+  <div class="toggle-row">
+    <div class="label-group">
+      <label>Enable AI</label>
+      <p class="hint" style="margin:0">Use AI to extract recipes from sites without structured data.</p>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="aiEnabled" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="paywall-note">
+    💡 AI features require your own API key from OpenAI or Anthropic. Cheaper models like <strong>gpt-4o-mini</strong> or <strong>claude-haiku</strong> work great for recipe extraction and cost fractions of a cent per save.
+  </div>
+
+  <div class="ai-fields" id="aiFields">
+    <div class="field" style="margin-top:18px">
+      <label>AI Provider</label>
+      <div class="model-grid" id="providerGrid">
+        <label class="model-option">
+          <input type="radio" name="aiProvider" value="openai" />
+          <div>
+            <div class="model-name">OpenAI</div>
+            <div class="model-desc">GPT-4o, GPT-4o-mini</div>
+          </div>
+        </label>
+        <label class="model-option">
+          <input type="radio" name="aiProvider" value="anthropic" />
+          <div>
+            <div class="model-name">Anthropic</div>
+            <div class="model-desc">Claude Haiku, Sonnet</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="field" id="modelField" style="display:none">
+      <label for="aiModel">Model</label>
+      <select id="aiModel"></select>
+    </div>
+
+    <div class="field">
+      <label for="aiApiKey">AI API Key</label>
+      <p class="hint">Your key is stored locally on your device and never sent to our servers.</p>
+      <input type="password" id="aiApiKey" placeholder="sk-... or sk-ant-..." autocomplete="off" />
+    </div>
+  </div>
+
+  <div style="margin-top: 24px">
+    <button class="save-btn" id="saveBtn">Save Settings</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
