@@ -54,6 +54,10 @@ function showResult(result) {
     } else {
       aiBadge.style.display = 'none';
     }
+    // Deep-link to the newly created page
+    const openBtn = document.getElementById('openBtn');
+    const base = 'https://theparchment.app';
+    openBtn.href = result.pageId ? `${base}?page=${result.pageId}` : base;
     showState(stateSuccess);
   } else {
     showState(stateError);
