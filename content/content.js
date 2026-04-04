@@ -41,50 +41,32 @@ async function extractYouTubeData() {
 }
 
 async function fetchTranscript(videoId) {
-  // Strategy 1: grab ytInitialPlayerResponse from window via injected script
-  let playerResponse = await getPlayerResponseFromWindow();
-
-  // Strategy 2: parse from inline script tags
-  if (!playerResponse) {
-    const scripts = [...document.querySelectorAll('script')];
-    for (const script of scripts) {
-      const text = script.textContent || '';
-      if (text.includes('ytInitialPlayerResponse')) {
-        // Try multiple regex patterns YouTube uses
-        const patterns = [
-          /ytInitialPlayerResponse\s*=\s*(\{.+?\})\s*;\s*(?:var|const|let|window)/s,
-          /ytInitialPlayerResponse\s*=\s*(\{.+?\});/s,
-          /ytInitialPlayerResponse":(\{.+?\}),"(?:responseContext|adSlots)/s,
-        ];
-        for (const pattern of patterns) {
-          const match = text.match(pattern);
-          if (match) {
-            try { playerResponse = JSON.parse(match[1]); break; } catch (e) {}
-          }
+  // Ask page-context.js (MAIN world) for the caption track URL via postMessage
+  const baseUrl = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timed out waiting for YouTube player data. Try reloading the video.')), 5000);
+    window.addEventListener('message', function handler(event) {
+      if (event.source !== window) return;
+      if (event.data?.type === 'PARCHMENT_YT_DATA') {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        if (!event.data.baseUrl) {
+          const tracks = event.data.availableTracks || [];
+          if (tracks.length === 0) reject(new Error('No captions available for this video.'));
+          else reject(new Error(`No English captions found. Available: ${tracks.map(t => t.lang).join(', ')}`));
+        } else {
+          resolve(event.data.baseUrl);
         }
-        if (playerResponse) break;
       }
-    }
-  }
+    });
+    window.postMessage({ type: 'PARCHMENT_GET_YT_DATA' }, '*');
+  });
 
-  if (!playerResponse) throw new Error('Could not find player data. Try reloading the video and trying again.');
-
-  const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-  if (!captions || captions.length === 0) throw new Error('No captions available for this video.');
-
-  const track = captions.find(t => t.languageCode === 'en' && !t.kind)
-    || captions.find(t => t.languageCode === 'en')
-    || captions[0];
-
-  if (!track?.baseUrl) throw new Error('No usable caption track found.');
-
-  const result = await fetchTranscriptFromPage(track.baseUrl);
+  const result = await fetchTranscriptFromPage(baseUrl);
   return result.segments;
 }
 
 function getPlayerResponseFromWindow() {
-  // Running in MAIN world — can access window directly
-  return Promise.resolve(window.ytInitialPlayerResponse || null);
+  return Promise.resolve(null); // unused — handled via postMessage now
 }
 
 async function fetchTranscriptXML(baseUrl) {
