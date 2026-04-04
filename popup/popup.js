@@ -95,11 +95,11 @@ async function init() {
     const hasTranscriptKey = !!settings.transcriptApiKey;
     const noTranscript = !hasTranscriptKey;
 
-    // Show/hide AI buttons based on whether AI is configured
     document.getElementById('saveBtnYouTubeSummaryOnly').style.display = hasAI ? 'block' : 'none';
     document.getElementById('saveBtnYouTubeFull').style.display = hasAI ? 'block' : 'none';
-
     document.getElementById('saveBtnYouTubeTranscript').disabled = noTranscript;
+
+    aiNote.textContent = noTranscript
       ? '⚠️ Add a TranscriptAPI.com key in Settings'
       : hasAI
         ? `AI via ${settings.aiProvider || 'AI'}`
