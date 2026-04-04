@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Parchment",
-  "version": "1.0.0",
-  "description": "Save recipes and web content to your Parchment account.",
+  "version": "1.1.0",
+  "description": "Save recipes, YouTube videos, and articles to your Parchment account.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://theparchment.app/*",
