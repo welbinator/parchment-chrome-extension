@@ -451,6 +451,34 @@ async function handleSaveArticle(data) {
   const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
   if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
 
+  // If AI is enabled, ask it whether this is a recipe first
+  if (!data._skipAI && settings.aiEnabled && settings.aiApiKey) {
+    const snippet = data.text.slice(0, 3000);
+    const classifyPrompt = `You are classifying a web page. Based on the title and content snippet below, is this page primarily a food recipe (with ingredients and cooking instructions)? Answer with ONLY the word "yes" or "no".
+
+Title: ${data.title}
+URL: ${data.url}
+
+Content:
+${snippet}`;
+
+    try {
+      const answer = await summarizeTranscript([], data.title, settings, classifyPrompt);
+      if (answer?.trim().toLowerCase().startsWith('yes')) {
+        // It's a recipe — run AI recipe extraction instead
+        const recipeResult = await extractRecipeWithAI(data, settings);
+        if (recipeResult) {
+          const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Recipes');
+          const blocks = buildRecipeBlocks(recipeResult);
+          const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, recipeResult.name || data.title, blocks);
+          return { success: true, title: recipeResult.name || data.title, pageId, collection: 'Recipes', hadSummary: true };
+        }
+      }
+    } catch (e) {
+      // Classification failed — continue as article
+    }
+  }
+
   let summary = null;
   let summaryError = null;
 

@@ -98,9 +98,14 @@ async function init() {
   } else if (isRecipe) {
     showState(stateIdleRecipe);
   } else {
-    // Generic article/page
+    // Generic article/page — AI will determine if it's a recipe during save
+    const hint = isRecipe === false && hasAI
+      ? `AI will detect page type automatically`
+      : hasAI
+        ? `Summarized via ${settings.aiProvider || 'AI'}`
+        : '⚠️ Add an AI key in Settings to enable summaries';
     aiNoteArticle.textContent = hasAI
-      ? `Summarized via ${settings.aiProvider || 'AI'}`
+      ? `AI will detect page type & summarize via ${settings.aiProvider || 'AI'}`
       : '⚠️ Add an AI key in Settings to enable summaries';
     document.getElementById('saveBtnArticle').disabled = !hasAI;
     showState(stateIdleArticle);
@@ -189,7 +194,7 @@ async function doArticleSave(withAI) {
   }
 
   showState(stateDetecting);
-  detectingMsg.textContent = withAI ? 'Reading page…' : 'Saving page…';
+  detectingMsg.textContent = withAI ? 'Analyzing page…' : 'Saving page…';
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   await ensureContentScript(tab.id);
@@ -203,7 +208,7 @@ async function doArticleSave(withAI) {
     return;
   }
 
-  if (withAI) detectingMsg.textContent = 'Summarizing with AI…';
+  if (withAI) detectingMsg.textContent = 'AI is classifying & summarizing…';
 
   const payload = withAI ? extracted : { ...extracted, _skipAI: true };
   const result = await chrome.runtime.sendMessage({ action: 'saveArticle', data: payload });
