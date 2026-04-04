@@ -212,26 +212,43 @@ async function callAnthropic(apiKey, model, prompt) {
 }
 
 async function callGemini(apiKey, model, prompt) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+  // Try v1 first, fall back to v1beta
+  for (const version of ['v1', 'v1beta']) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+    if (res.status === 404) continue;
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const err = await res.json();
+        detail = err?.error?.message || err?.error?.status || '';
+      } catch {}
+      throw new Error(`Gemini ${res.status}${detail ? ': ' + detail : ''}`);
     }
-  );
-  if (!res.ok) {
-    let detail = '';
-    try {
-      const err = await res.json();
-      detail = err?.error?.message || err?.error?.status || '';
-    } catch {}
-    throw new Error(`Gemini ${res.status}${detail ? ': ' + detail : ''}`);
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Model not found in either version — auto-detect a working model
+  const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+  if (listRes.ok) {
+    const listData = await listRes.json();
+    const available = (listData.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+      .map(m => m.name.replace('models/', ''));
+    if (available.length > 0) {
+      throw new Error(`Model "${model}" not found. Available models for your key: ${available.join(', ')}. Please update your model in Settings.`);
+    }
+  }
+  throw new Error(`Model "${model}" not found. Check Settings → AI provider and select a valid model.`);
 }
 
 async function extractRecipeWithAI(rawData, settings) {
