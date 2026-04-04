@@ -518,9 +518,9 @@ function buildArticleBlocks(data, summary) {
   const blocks = [];
 
   // Source info
-  blocks.push({ type: 'paragraph', content: `🔗 ${data.url}` });
-  if (data.author) blocks.push({ type: 'paragraph', content: `✍️ ${data.author}` });
-  if (data.siteName) blocks.push({ type: 'paragraph', content: `🌐 ${data.siteName}` });
+  blocks.push({ type: 'text', content: `🔗 ${data.url}` });
+  if (data.author) blocks.push({ type: 'text', content: `✍️ ${data.author}` });
+  if (data.siteName) blocks.push({ type: 'text', content: `🌐 ${data.siteName}` });
 
   blocks.push({ type: 'divider', content: '' });
 
@@ -532,7 +532,7 @@ function buildArticleBlocks(data, summary) {
       if (trimmed.startsWith('- ')) {
         blocks.push({ type: 'todo', content: trimmed.slice(2) });
       } else {
-        blocks.push({ type: 'paragraph', content: trimmed });
+        blocks.push({ type: 'text', content: trimmed });
       }
     }
     blocks.push({ type: 'divider', content: '' });
@@ -540,7 +540,7 @@ function buildArticleBlocks(data, summary) {
 
   if (data.description) {
     blocks.push({ type: 'heading', content: 'Description' });
-    blocks.push({ type: 'paragraph', content: data.description });
+    blocks.push({ type: 'text', content: data.description });
     blocks.push({ type: 'divider', content: '' });
   }
 
@@ -549,7 +549,7 @@ function buildArticleBlocks(data, summary) {
   const excerpt = data.text.slice(0, 2000);
   const paragraphs = excerpt.split('\n\n').filter(p => p.trim().length > 30);
   for (const p of paragraphs.slice(0, 8)) {
-    blocks.push({ type: 'paragraph', content: p.trim() });
+    blocks.push({ type: 'text', content: p.trim() });
   }
 
   return blocks;
