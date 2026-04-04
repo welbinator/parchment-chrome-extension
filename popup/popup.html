@@ -10,7 +10,6 @@
     :root {
       --primary: #2bcaaa;
       --primary-dark: #22a98d;
-      --primary-fg: #0a2e28;
     }
 
     body {
@@ -28,11 +27,6 @@
       gap: 10px;
     }
 
-    .header img {
-      width: 24px;
-      height: 24px;
-    }
-
     .header h1 {
       font-size: 15px;
       font-weight: 600;
@@ -45,38 +39,26 @@
       background: none;
       border: none;
       cursor: pointer;
-      color: rgba(10,46,40,0.6);
+      color: rgba(255,255,255,0.7);
       font-size: 18px;
       padding: 2px 4px;
       border-radius: 4px;
       line-height: 1;
     }
-
     .header .settings-btn:hover { color: #fff; background: rgba(0,0,0,0.1); }
 
     .body { padding: 16px; }
 
-    .status-idle,
-    .status-detecting,
-    .status-success,
-    .status-error {
-      display: none;
-      text-align: center;
-    }
-
-    .status-idle.visible,
-    .status-detecting.visible,
-    .status-success.visible,
-    .status-error.visible {
-      display: block;
-    }
+    .state { display: none; text-align: center; }
+    .state.visible { display: block; }
 
     /* Idle */
-    .status-idle .icon { font-size: 36px; margin-bottom: 10px; }
-    .status-idle p { font-size: 13px; color: #666; margin-bottom: 16px; }
+    .state-idle .icon { font-size: 36px; margin-bottom: 10px; }
+    .state-idle .mode-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); margin-bottom: 6px; }
+    .state-idle p { font-size: 13px; color: #666; margin-bottom: 16px; }
 
     /* Detecting */
-    .status-detecting p { font-size: 13px; color: #666; margin-top: 10px; }
+    .state-detecting p { font-size: 13px; color: #666; margin-top: 10px; }
     .spinner {
       width: 36px; height: 36px;
       border: 3px solid #d0ede8;
@@ -88,17 +70,30 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Success */
-    .status-success .icon { font-size: 36px; margin-bottom: 10px; }
-    .status-success .recipe-name {
+    .state-success .icon { font-size: 36px; margin-bottom: 10px; }
+    .state-success .saved-title {
       font-size: 14px;
       font-weight: 600;
       color: #1a1a1a;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .status-success p { font-size: 12px; color: #666; }
-    .status-success .open-btn {
+    .state-success .saved-collection {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .state-success .ai-badge {
       display: inline-block;
-      margin-top: 12px;
+      padding: 2px 8px;
+      background: #e8f8f4;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--primary-dark);
+      margin-bottom: 10px;
+    }
+    .state-success .open-btn {
+      display: inline-block;
+      margin-top: 8px;
       padding: 7px 16px;
       background: var(--primary);
       color: #fff;
@@ -109,12 +104,12 @@
       cursor: pointer;
       text-decoration: none;
     }
-    .status-success .open-btn:hover { background: var(--primary-dark); }
+    .state-success .open-btn:hover { background: var(--primary-dark); }
 
     /* Error */
-    .status-error .icon { font-size: 36px; margin-bottom: 10px; }
-    .status-error p { font-size: 13px; color: #c0392b; }
-    .status-error .setup-btn {
+    .state-error .icon { font-size: 36px; margin-bottom: 10px; }
+    .state-error p { font-size: 13px; color: #c0392b; }
+    .state-error .setup-btn {
       display: inline-block;
       margin-top: 12px;
       padding: 7px 16px;
@@ -126,25 +121,35 @@
       cursor: pointer;
     }
 
-    /* Save button */
+    /* Buttons */
     .save-btn {
       width: 100%;
       padding: 11px;
       background: var(--primary);
       color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
       transition: background 0.15s;
+      margin-bottom: 8px;
     }
     .save-btn:hover { background: var(--primary-dark); }
     .save-btn:disabled { background: #ccc; cursor: not-allowed; }
 
-    .source-badge {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 3px 8px;
-      background: #ede9e3;
-      border-radius: 999px;
+    .save-btn.secondary {
+      background: #fff;
+      color: var(--primary-dark);
+      border: 1.5px solid var(--primary);
+    }
+    .save-btn.secondary:hover { background: #e8f8f4; }
+
+    .ai-note {
       font-size: 11px;
-      color: #888;
+      color: #aaa;
+      margin-top: 4px;
     }
 
     .footer {
@@ -164,34 +169,47 @@
   </div>
 
   <div class="body">
-    <!-- Idle: ready to save -->
-    <div class="status-idle visible" id="stateIdle">
+
+    <!-- Idle: recipe mode -->
+    <div class="state state-idle" id="stateIdleRecipe">
       <div class="icon">🍽️</div>
-      <p>Click below to save this recipe to your Parchment account.</p>
-      <button class="save-btn" id="saveBtn">Save Recipe</button>
+      <div class="mode-label">Recipe</div>
+      <p>Save this recipe to your Parchment account.</p>
+      <button class="save-btn" id="saveBtnRecipe">Save Recipe</button>
+    </div>
+
+    <!-- Idle: YouTube mode -->
+    <div class="state state-idle" id="stateIdleYouTube">
+      <div class="icon">▶️</div>
+      <div class="mode-label">YouTube Video</div>
+      <p>Save this video's transcript and notes to Parchment.</p>
+      <button class="save-btn" id="saveBtnYouTubeFull">Save with AI Summary</button>
+      <button class="save-btn secondary" id="saveBtnYouTubeTranscript">Save Transcript Only</button>
+      <p class="ai-note" id="aiNote"></p>
     </div>
 
     <!-- Detecting -->
-    <div class="status-detecting" id="stateDetecting">
+    <div class="state state-detecting" id="stateDetecting">
       <div class="spinner"></div>
-      <p id="detectingMsg">Detecting recipe…</p>
+      <p id="detectingMsg">Working…</p>
     </div>
 
     <!-- Success -->
-    <div class="status-success" id="stateSuccess">
+    <div class="state state-success" id="stateSuccess">
       <div class="icon">✅</div>
-      <div class="recipe-name" id="successName"></div>
-      <p>Saved to your <strong>Recipes</strong> collection.</p>
-      <span class="source-badge" id="sourceBadge"></span><br />
+      <div class="saved-title" id="successTitle"></div>
+      <div class="saved-collection" id="successCollection"></div>
+      <div class="ai-badge" id="aiBadge" style="display:none">✨ AI summary included</div>
       <a class="open-btn" href="https://theparchment.app" target="_blank">Open Parchment</a>
     </div>
 
     <!-- Error -->
-    <div class="status-error" id="stateError">
+    <div class="state state-error" id="stateError">
       <div class="icon">⚠️</div>
       <p id="errorMsg"></p>
       <button class="setup-btn" id="errorSetupBtn" style="display:none">Open Settings</button>
     </div>
+
   </div>
 
   <div class="footer">
