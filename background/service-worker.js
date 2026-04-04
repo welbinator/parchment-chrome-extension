@@ -167,9 +167,9 @@ Keep it concise and practical. Do not include filler phrases like "In this video
     } else if (settings.aiProvider === 'google') {
       return await callGemini(settings.aiApiKey, settings.aiModel || 'gemini-2.0-flash', prompt);
     }
+    throw new Error('No AI provider selected.');
   } catch (e) {
-    console.error('AI summarization failed:', e);
-    return null;
+    throw e; // bubble up so caller can report it
   }
 }
 
@@ -400,13 +400,18 @@ async function handleSaveYouTube(data) {
 
   // Summarize if AI is enabled and not skipped
   let summary = null;
+  let summaryError = null;
   if (!data._skipAI && settings.aiEnabled && settings.aiApiKey) {
-    summary = await summarizeTranscript(transcript, data.title, settings);
+    try {
+      summary = await summarizeTranscript(transcript, data.title, settings);
+    } catch (e) {
+      summaryError = e.message;
+    }
   }
 
   const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'YouTube Videos');
   const blocks = buildYouTubeBlocks({ ...data, transcript }, summary);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
-  return { success: true, title: data.title, pageId, collection: 'YouTube Videos', hadSummary: !!summary };
+  return { success: true, title: data.title, pageId, collection: 'YouTube Videos', hadSummary: !!summary, summaryError };
 }

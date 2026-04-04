@@ -142,7 +142,17 @@ async function doYouTubeSave(withAI) {
   if (result.success) {
     successTitle.textContent = result.title;
     successCollection.textContent = `Saved to ${result.collection}`;
-    aiBadge.style.display = result.hadSummary ? 'inline-block' : 'none';
+    if (result.hadSummary) {
+      aiBadge.style.display = 'inline-block';
+      aiBadge.textContent = '✨ AI summary included';
+    } else if (result.summaryError) {
+      aiBadge.style.display = 'inline-block';
+      aiBadge.textContent = `⚠️ AI failed: ${result.summaryError}`;
+      aiBadge.style.color = '#c0392b';
+      aiBadge.style.background = '#fdecea';
+    } else {
+      aiBadge.style.display = 'none';
+    }
     showState(stateSuccess);
   } else {
     showState(stateError);
