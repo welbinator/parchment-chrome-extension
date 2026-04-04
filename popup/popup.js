@@ -152,7 +152,8 @@ document.getElementById('saveBtnRecipe').addEventListener('click', async () => {
 
 // ── YouTube save ──────────────────────────────────────────────────────────
 
-async function doYouTubeSave(withAI) {
+async function doYouTubeSave(mode) {
+  // mode: 'summaryOnly' | 'summaryAndTranscript' | 'transcriptOnly'
   const settings = await chrome.storage.sync.get(['parchmentApiKey']);
   if (!settings.parchmentApiKey) {
     showState(stateError);
@@ -176,15 +177,16 @@ async function doYouTubeSave(withAI) {
     return;
   }
 
-  if (withAI) detectingMsg.textContent = 'Summarizing with AI…';
+  if (mode !== 'transcriptOnly') detectingMsg.textContent = 'Summarizing with AI…';
 
-  const payload = withAI ? data : { ...data, _skipAI: true };
+  const payload = { ...data, _saveMode: mode };
   const result = await chrome.runtime.sendMessage({ action: 'saveYouTube', data: payload });
   showResult(result);
 }
 
-document.getElementById('saveBtnYouTubeFull').addEventListener('click', () => doYouTubeSave(true));
-document.getElementById('saveBtnYouTubeTranscript').addEventListener('click', () => doYouTubeSave(false));
+document.getElementById('saveBtnYouTubeSummaryOnly').addEventListener('click', () => doYouTubeSave('summaryOnly'));
+document.getElementById('saveBtnYouTubeFull').addEventListener('click', () => doYouTubeSave('summaryAndTranscript'));
+document.getElementById('saveBtnYouTubeTranscript').addEventListener('click', () => doYouTubeSave('transcriptOnly'));
 
 // ── Article save ──────────────────────────────────────────────────────────
 

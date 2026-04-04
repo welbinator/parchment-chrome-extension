@@ -429,10 +429,13 @@ async function handleSaveYouTube(data) {
     return { success: false, error: 'No transcript available for this video.' };
   }
 
-  // Summarize if AI is enabled and not skipped
+  // Summarize if AI requested
   let summary = null;
   let summaryError = null;
-  if (!data._skipAI && settings.aiEnabled && settings.aiApiKey) {
+  const wantAI = data._saveMode !== 'transcriptOnly';
+  const wantTranscript = data._saveMode !== 'summaryOnly';
+
+  if (wantAI && settings.aiEnabled && settings.aiApiKey) {
     try {
       summary = await summarizeTranscript(transcript, data.title, settings);
     } catch (e) {
@@ -441,7 +444,7 @@ async function handleSaveYouTube(data) {
   }
 
   const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'YouTube Videos');
-  const blocks = buildYouTubeBlocks({ ...data, transcript }, summary);
+  const blocks = buildYouTubeBlocks({ ...data, transcript: wantTranscript ? transcript : [] }, summary);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
   return { success: true, title: data.title, pageId, collection: 'YouTube Videos', hadSummary: !!summary, summaryError };
