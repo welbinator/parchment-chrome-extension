@@ -277,10 +277,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function handleFetchTranscript(baseUrl) {
+  console.log('[Parchment] Fetching transcript from:', baseUrl);
+
   // Try JSON3 first, fallback to XML
   const jsonRes = await fetch(baseUrl + '&fmt=json3');
+  console.log('[Parchment] JSON3 response status:', jsonRes.status);
   if (jsonRes.ok) {
     const text = await jsonRes.text();
+    console.log('[Parchment] JSON3 response length:', text?.length, 'preview:', text?.slice(0, 200));
     if (text && text.trim().length > 0) {
       try {
         const data = JSON.parse(text);
@@ -292,15 +296,19 @@ async function handleFetchTranscript(baseUrl) {
           const t = event.segs.map(s => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
           if (t) segments.push({ startMs, text: t });
         }
+        console.log('[Parchment] JSON3 segments parsed:', segments.length);
         if (segments.length > 0) return { segments };
-      } catch (e) {}
+      } catch (e) { console.log('[Parchment] JSON3 parse error:', e.message); }
     }
   }
 
   // XML fallback
+  console.log('[Parchment] Trying XML fallback...');
   const xmlRes = await fetch(baseUrl);
+  console.log('[Parchment] XML response status:', xmlRes.status);
   if (!xmlRes.ok) throw new Error(`Transcript fetch failed: ${xmlRes.status}`);
   const xml = await xmlRes.text();
+  console.log('[Parchment] XML response length:', xml?.length, 'preview:', xml?.slice(0, 300));
   if (!xml || xml.trim().length === 0) throw new Error('No transcript data returned.');
 
   // Parse XML manually (no DOM parser in service worker)
@@ -316,6 +324,7 @@ async function handleFetchTranscript(baseUrl) {
     if (text) segments.push({ startMs, text });
   }
 
+  console.log('[Parchment] XML segments parsed:', segments.length);
   if (segments.length === 0) throw new Error('Transcript was empty or could not be parsed.');
   return { segments };
 }
