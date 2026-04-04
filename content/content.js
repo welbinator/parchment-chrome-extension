@@ -41,32 +41,64 @@ async function extractYouTubeData() {
 }
 
 async function fetchTranscript(videoId) {
-  // Ask page-context.js (MAIN world) for the caption track URL via postMessage
-  const baseUrl = await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timed out waiting for YouTube player data. Try reloading the video.')), 5000);
-    window.addEventListener('message', function handler(event) {
-      if (event.source !== window) return;
-      if (event.data?.type === 'PARCHMENT_YT_DATA') {
-        clearTimeout(timeout);
-        window.removeEventListener('message', handler);
-        if (!event.data.baseUrl) {
-          const tracks = event.data.availableTracks || [];
-          if (tracks.length === 0) reject(new Error('No captions available for this video.'));
-          else reject(new Error(`No English captions found. Available: ${tracks.map(t => t.lang).join(', ')}`));
-        } else {
-          resolve(event.data.baseUrl);
-        }
-      }
-    });
-    window.postMessage({ type: 'PARCHMENT_GET_YT_DATA' }, '*');
-  });
+  // Parse ytInitialPlayerResponse from inline script tags
+  // YouTube embeds it in several possible formats
+  let playerResponse = null;
+  const scripts = [...document.querySelectorAll('script')];
 
-  const result = await fetchTranscriptFromPage(baseUrl);
+  for (const script of scripts) {
+    const text = script.textContent || '';
+    if (!text.includes('ytInitialPlayerResponse')) continue;
+
+    // Try to find just the captions section to avoid giant JSON parse
+    const captionsIdx = text.indexOf('playerCaptionsTracklistRenderer');
+    if (captionsIdx === -1) continue;
+
+    // Walk back to find the opening brace of ytInitialPlayerResponse
+    const varIdx = text.lastIndexOf('ytInitialPlayerResponse', captionsIdx);
+    if (varIdx === -1) continue;
+
+    // Find where the value starts (after = or :)
+    const valueStart = text.indexOf('{', varIdx);
+    if (valueStart === -1) continue;
+
+    // Balance braces to find end of object
+    let depth = 0, i = valueStart, end = -1;
+    while (i < text.length && i < valueStart + 2000000) {
+      const ch = text[i];
+      if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+      i++;
+    }
+    if (end === -1) continue;
+
+    try {
+      playerResponse = JSON.parse(text.slice(valueStart, end + 1));
+      break;
+    } catch (e) {}
+  }
+
+  if (!playerResponse) {
+    throw new Error('Could not find YouTube player data. Please reload the video page and try again.');
+  }
+
+  const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  if (!captions || captions.length === 0) {
+    throw new Error('No captions available for this video.');
+  }
+
+  const track = captions.find(t => t.languageCode === 'en' && !t.kind)
+    || captions.find(t => t.languageCode === 'en')
+    || captions[0];
+
+  if (!track?.baseUrl) throw new Error('No usable caption track found.');
+
+  const result = await fetchTranscriptFromPage(track.baseUrl);
   return result.segments;
 }
 
 function getPlayerResponseFromWindow() {
-  return Promise.resolve(null); // unused — handled via postMessage now
+  return Promise.resolve(null); // unused
 }
 
 async function fetchTranscriptXML(baseUrl) {
