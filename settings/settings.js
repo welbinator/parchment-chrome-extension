@@ -10,8 +10,9 @@ const MODELS = {
     { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 — most capable' },
   ],
   google: [
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash — fast & free tier available (recommended)' },
+    { value: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash — fast & free tier (recommended)' },
     { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro — most capable' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash — legacy fallback' },
   ],
 };
 
