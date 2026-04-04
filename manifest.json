@@ -10,7 +10,8 @@
     "https://api.anthropic.com/*",
     "https://www.youtube.com/*",
     "https://youtube.com/*",
-    "https://*.youtube.com/*"
+    "https://*.youtube.com/*",
+    "https://transcriptapi.com/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",

@@ -39,10 +39,11 @@ function updateModelDropdown(provider) {
 // Load saved settings
 async function loadSettings() {
   const s = await chrome.storage.sync.get([
-    'parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel'
+    'parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel'
   ]);
 
   if (s.parchmentApiKey) document.getElementById('parchmentApiKey').value = s.parchmentApiKey;
+  if (s.transcriptApiKey) document.getElementById('transcriptApiKey').value = s.transcriptApiKey;
   if (s.aiEnabled) {
     aiEnabled.checked = true;
     aiFields.classList.add('visible');
@@ -59,6 +60,7 @@ async function loadSettings() {
 // Save settings
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const parchmentApiKey = document.getElementById('parchmentApiKey').value.trim();
+  const transcriptApiKey = document.getElementById('transcriptApiKey').value.trim();
   const enabled = aiEnabled.checked;
   const provider = document.querySelector('input[name="aiProvider"]:checked')?.value || '';
   const model = aiModel.value;
@@ -71,6 +73,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 
   await chrome.storage.sync.set({
     parchmentApiKey,
+    transcriptApiKey,
     aiEnabled: enabled,
     aiProvider: provider,
     aiModel: model,

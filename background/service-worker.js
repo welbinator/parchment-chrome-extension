@@ -353,21 +353,39 @@ async function handleSaveRecipe(extracted, tabId) {
 }
 
 async function handleSaveYouTube(data) {
-  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
   if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
+  if (!settings.transcriptApiKey) return { success: false, error: 'No TranscriptAPI key set. Add one in Settings to save YouTube videos.' };
 
-  if (data.transcriptError && !data.transcript) {
-    return { success: false, error: `Couldn't get transcript: ${data.transcriptError}` };
+  // Fetch transcript via TranscriptAPI.com
+  let transcript = null;
+  try {
+    const res = await fetch(
+      `https://transcriptapi.com/api/v2/youtube/transcript?video_url=${encodeURIComponent(data.videoId)}&format=json&include_timestamp=true&send_metadata=true`,
+      { headers: { 'Authorization': `Bearer ${settings.transcriptApiKey}` } }
+    );
+    if (!res.ok) throw new Error(`TranscriptAPI error: ${res.status}`);
+    const json = await res.json();
+    transcript = (json.transcript || []).map(s => ({
+      startMs: Math.round((s.start || 0) * 1000),
+      text: s.text || '',
+    })).filter(s => s.text);
+  } catch (e) {
+    return { success: false, error: `Transcript fetch failed: ${e.message}` };
+  }
+
+  if (!transcript || transcript.length === 0) {
+    return { success: false, error: 'No transcript available for this video.' };
   }
 
   // Summarize if AI is enabled and not skipped
   let summary = null;
-  if (!data._skipAI && settings.aiEnabled && settings.aiApiKey && data.transcript) {
-    summary = await summarizeTranscript(data.transcript, data.title, settings);
+  if (!data._skipAI && settings.aiEnabled && settings.aiApiKey) {
+    summary = await summarizeTranscript(transcript, data.title, settings);
   }
 
   const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'YouTube Videos');
-  const blocks = buildYouTubeBlocks(data, summary);
+  const blocks = buildYouTubeBlocks({ ...data, transcript }, summary);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
   return { success: true, title: data.title, pageId, collection: 'YouTube Videos', hadSummary: !!summary };
