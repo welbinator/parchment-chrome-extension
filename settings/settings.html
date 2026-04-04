@@ -78,6 +78,38 @@
 
     input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(43,202,170,0.2); }
 
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .input-row input { flex: 1; }
+
+    .test-btn {
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1.5px solid var(--primary);
+      background: #fff;
+      color: var(--primary-dark);
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .test-btn:hover { background: #e8f8f4; }
+    .test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .key-status {
+      font-size: 12px;
+      margin-top: 5px;
+      min-height: 16px;
+    }
+    .key-status.ok { color: #27ae60; }
+    .key-status.err { color: #c0392b; }
+    .key-status.checking { color: #888; }
+
     .toggle-row {
       display: flex;
       align-items: center;
@@ -181,14 +213,22 @@
   <div class="field">
     <label for="parchmentApiKey">API Key</label>
     <p class="hint">Find this in Parchment → Settings → API. Your key starts with <code>pmt_</code>.</p>
-    <input type="password" id="parchmentApiKey" placeholder="pmt_..." autocomplete="off" />
+    <div class="input-row">
+      <input type="password" id="parchmentApiKey" placeholder="pmt_..." autocomplete="off" />
+      <button class="test-btn" id="testParchment">Test</button>
+    </div>
+    <div class="key-status" id="parchmentStatus"></div>
   </div>
 
   <h2>Transcript API</h2>
   <div class="field">
     <label for="transcriptApiKey">TranscriptAPI.com Key</label>
     <p class="hint">Used to extract YouTube transcripts reliably. Get a free key at <a href="https://transcriptapi.com" target="_blank">transcriptapi.com</a>.</p>
-    <input type="password" id="transcriptApiKey" placeholder="tapi_..." autocomplete="off" />
+    <div class="input-row">
+      <input type="password" id="transcriptApiKey" placeholder="tapi_..." autocomplete="off" />
+      <button class="test-btn" id="testTranscript">Test</button>
+    </div>
+    <div class="key-status" id="transcriptStatus"></div>
   </div>
 
   <!-- AI Features -->
@@ -245,7 +285,11 @@
     <div class="field">
       <label for="aiApiKey">AI API Key</label>
       <p class="hint">Your key is stored locally on your device and never sent to our servers. Get a free Gemini key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a>.</p>
-      <input type="password" id="aiApiKey" placeholder="sk-... or sk-ant-..." autocomplete="off" />
+      <div class="input-row">
+        <input type="password" id="aiApiKey" placeholder="sk-... or sk-ant-... or AIza..." autocomplete="off" />
+        <button class="test-btn" id="testAI">Test</button>
+      </div>
+      <div class="key-status" id="aiStatus"></div>
     </div>
   </div>
 

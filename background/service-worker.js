@@ -222,7 +222,14 @@ async function callGemini(apiKey, model, prompt) {
       }),
     }
   );
-  if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const err = await res.json();
+      detail = err?.error?.message || err?.error?.status || '';
+    } catch {}
+    throw new Error(`Gemini ${res.status}${detail ? ': ' + detail : ''}`);
+  }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
