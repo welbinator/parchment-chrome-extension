@@ -71,7 +71,15 @@ async function fetchTranscript(videoId) {
   // Fetch the XML transcript
   const res = await fetch(track.baseUrl + '&fmt=json3');
   if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`);
-  const data = await res.json();
+  const text = await res.text();
+  if (!text || text.trim().length === 0) throw new Error('Transcript response was empty.');
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    // Fallback: try XML format
+    return await fetchTranscriptXML(track.baseUrl);
+  }
 
   // Parse into flat array of { start, text } objects
   const events = data.events || [];
@@ -79,7 +87,33 @@ async function fetchTranscript(videoId) {
   for (const event of events) {
     if (!event.segs) continue;
     const startMs = event.tStartMs || 0;
-    const text = event.segs.map(s => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
+    const text2 = event.segs.map(s => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
+    if (text2) segments.push({ startMs, text: text2 });
+  }
+
+  if (segments.length === 0) return await fetchTranscriptXML(track.baseUrl);
+
+  return segments;
+}
+
+async function fetchTranscriptXML(baseUrl) {
+  const res = await fetch(baseUrl);
+  if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`);
+  const xml = await res.text();
+  if (!xml || xml.trim().length === 0) throw new Error('No transcript data returned.');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'text/xml');
+  const textNodes = doc.querySelectorAll('text');
+
+  if (textNodes.length === 0) throw new Error('No captions found in transcript.');
+
+  const segments = [];
+  for (const node of textNodes) {
+    const startMs = Math.round(parseFloat(node.getAttribute('start') || '0') * 1000);
+    const raw = node.textContent || '';
+    // Decode HTML entities
+    const text = raw.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
     if (text) segments.push({ startMs, text });
   }
 

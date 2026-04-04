@@ -9,7 +9,8 @@
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
     "https://www.youtube.com/*",
-    "https://youtube.com/*"
+    "https://youtube.com/*",
+    "https://*.youtube.com/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",
