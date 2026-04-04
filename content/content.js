@@ -179,12 +179,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse(extractRecipe());
   }
   if (msg.action === 'isRecipe') {
-    // Quick check: does the page have recipe schema or strong heuristic signals?
+    // Only trust explicit schema.org Recipe type
     const hasSchema = [...document.querySelectorAll('script[type="application/ld+json"]')].some(s => {
-      try { return JSON.stringify(JSON.parse(s.textContent)).includes('"Recipe"'); } catch { return false; }
+      try {
+        const data = JSON.parse(s.textContent);
+        const checkType = (obj) => {
+          if (!obj || typeof obj !== 'object') return false;
+          const type = obj['@type'];
+          if (type === 'Recipe') return true;
+          if (Array.isArray(type) && type.includes('Recipe')) return true;
+          if (Array.isArray(obj['@graph'])) return obj['@graph'].some(checkType);
+          return false;
+        };
+        return checkType(data);
+      } catch { return false; }
     });
-    const hasHeuristic = !!(scrapeHeuristic());
-    sendResponse({ isRecipe: hasSchema || hasHeuristic });
+    sendResponse({ isRecipe: hasSchema });
   }
   if (msg.action === 'extractYouTube') {
     extractYouTubeData().then(sendResponse);
