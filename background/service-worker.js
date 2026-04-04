@@ -535,21 +535,6 @@ function buildArticleBlocks(data, summary) {
         blocks.push({ type: 'text', content: trimmed });
       }
     }
-    blocks.push({ type: 'divider', content: '' });
-  }
-
-  if (data.description) {
-    blocks.push({ type: 'heading2', content: 'Description' });
-    blocks.push({ type: 'text', content: data.description });
-    blocks.push({ type: 'divider', content: '' });
-  }
-
-  // Raw text excerpt (first ~2000 chars)
-  blocks.push({ type: 'heading2', content: 'Page Content' });
-  const excerpt = data.text.slice(0, 2000);
-  const paragraphs = excerpt.split('\n\n').filter(p => p.trim().length > 30);
-  for (const p of paragraphs.slice(0, 8)) {
-    blocks.push({ type: 'text', content: p.trim() });
   }
 
   return blocks;
