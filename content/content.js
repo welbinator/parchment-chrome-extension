@@ -42,7 +42,6 @@ async function extractYouTubeData() {
 
 async function fetchTranscript(videoId) {
   // YouTube embeds captions track info in ytInitialPlayerResponse
-  // We extract the timedtext URL from there
   const scripts = [...document.querySelectorAll('script')];
   let playerResponse = null;
 
@@ -61,39 +60,24 @@ async function fetchTranscript(videoId) {
   const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
   if (!captions || captions.length === 0) throw new Error('No captions available for this video.');
 
-  // Prefer English, fallback to first available
+  // Prefer English manual captions, then English auto, then first available
   const track = captions.find(t => t.languageCode === 'en' && !t.kind)
     || captions.find(t => t.languageCode === 'en')
     || captions[0];
 
   if (!track?.baseUrl) throw new Error('No usable caption track found.');
 
-  // Fetch the XML transcript
-  const res = await fetch(track.baseUrl + '&fmt=json3');
-  if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`);
-  const text = await res.text();
-  if (!text || text.trim().length === 0) throw new Error('Transcript response was empty.');
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    // Fallback: try XML format
-    return await fetchTranscriptXML(track.baseUrl);
-  }
-
-  // Parse into flat array of { start, text } objects
-  const events = data.events || [];
-  const segments = [];
-  for (const event of events) {
-    if (!event.segs) continue;
-    const startMs = event.tStartMs || 0;
-    const text2 = event.segs.map(s => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
-    if (text2) segments.push({ startMs, text: text2 });
-  }
-
-  if (segments.length === 0) return await fetchTranscriptXML(track.baseUrl);
-
-  return segments;
+  // Send the baseUrl to the background service worker to fetch
+  // (content scripts can be blocked by CORS on the timedtext endpoint)
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { action: 'fetchTranscript', baseUrl: track.baseUrl },
+      (response) => {
+        if (response?.error) reject(new Error(response.error));
+        else resolve(response?.segments);
+      }
+    );
+  });
 }
 
 async function fetchTranscriptXML(baseUrl) {

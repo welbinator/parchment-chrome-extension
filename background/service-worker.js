@@ -268,7 +268,57 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true;
   }
+  if (msg.action === 'fetchTranscript') {
+    handleFetchTranscript(msg.baseUrl).then(sendResponse).catch(err => {
+      sendResponse({ error: err.message });
+    });
+    return true;
+  }
 });
+
+async function handleFetchTranscript(baseUrl) {
+  // Try JSON3 first, fallback to XML
+  const jsonRes = await fetch(baseUrl + '&fmt=json3');
+  if (jsonRes.ok) {
+    const text = await jsonRes.text();
+    if (text && text.trim().length > 0) {
+      try {
+        const data = JSON.parse(text);
+        const events = data.events || [];
+        const segments = [];
+        for (const event of events) {
+          if (!event.segs) continue;
+          const startMs = event.tStartMs || 0;
+          const t = event.segs.map(s => s.utf8 || '').join('').replace(/\n/g, ' ').trim();
+          if (t) segments.push({ startMs, text: t });
+        }
+        if (segments.length > 0) return { segments };
+      } catch (e) {}
+    }
+  }
+
+  // XML fallback
+  const xmlRes = await fetch(baseUrl);
+  if (!xmlRes.ok) throw new Error(`Transcript fetch failed: ${xmlRes.status}`);
+  const xml = await xmlRes.text();
+  if (!xml || xml.trim().length === 0) throw new Error('No transcript data returned.');
+
+  // Parse XML manually (no DOM parser in service worker)
+  const segments = [];
+  const regex = /<text start="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    const startMs = Math.round(parseFloat(match[1]) * 1000);
+    const text = match[2]
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+      .replace(/<[^>]+>/g, '').trim();
+    if (text) segments.push({ startMs, text });
+  }
+
+  if (segments.length === 0) throw new Error('Transcript was empty or could not be parsed.');
+  return { segments };
+}
 
 async function handleSaveRecipe(extracted, tabId) {
   const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
