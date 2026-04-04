@@ -9,6 +9,10 @@ const MODELS = {
     { value: 'claude-haiku-3-5', label: 'Claude Haiku 3.5 — fast & cheap (recommended)' },
     { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 — most capable' },
   ],
+  google: [
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash — fast & free tier available (recommended)' },
+    { value: 'gemini-2.5-pro-preview-03-25', label: 'Gemini 2.5 Pro — most capable' },
+  ],
 };
 
 const aiEnabled = document.getElementById('aiEnabled');
