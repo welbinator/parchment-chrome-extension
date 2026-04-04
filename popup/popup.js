@@ -93,11 +93,18 @@ async function init() {
 
   if (isYT) {
     const hasTranscriptKey = !!settings.transcriptApiKey;
-    aiNote.textContent = !hasTranscriptKey
+    const noTranscript = !hasTranscriptKey;
+
+    // Show/hide AI buttons based on whether AI is configured
+    document.getElementById('saveBtnYouTubeSummaryOnly').style.display = hasAI ? 'block' : 'none';
+    document.getElementById('saveBtnYouTubeFull').style.display = hasAI ? 'block' : 'none';
+
+    document.getElementById('saveBtnYouTubeTranscript').disabled = noTranscript;
       ? '⚠️ Add a TranscriptAPI.com key in Settings'
       : hasAI
-        ? `AI summary via ${settings.aiProvider || 'AI'}`
-        : 'Add an AI key in Settings to get summaries';
+        ? `AI via ${settings.aiProvider || 'AI'}`
+        : '⚠️ Add an AI key in Settings to enable summaries';
+
     showState(stateIdleYouTube);
   } else if (isRecipe) {
     showState(stateIdleRecipe);
