@@ -29,7 +29,7 @@ errorSetupBtn.addEventListener('click', openSettings);
 
 async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey']);
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey']);
 
   let isYT = false;
   try {
@@ -46,9 +46,12 @@ async function init() {
 
   if (isYT) {
     const hasAI = settings.aiEnabled && settings.aiApiKey;
-    aiNote.textContent = hasAI
-      ? `AI summary via ${settings.aiProvider || 'AI'}`
-      : 'Add an AI key in Settings to get summaries';
+    const hasTranscriptKey = !!settings.transcriptApiKey;
+    aiNote.textContent = !hasTranscriptKey
+      ? '⚠️ Add a TranscriptAPI.com key in Settings'
+      : hasAI
+        ? `AI summary via ${settings.aiProvider || 'AI'}`
+        : 'Add an AI key in Settings to get summaries';
     showState(stateIdleYouTube);
   } else {
     showState(stateIdleRecipe);
