@@ -130,11 +130,61 @@ function scrapeHeuristic() {
   return { name, url: location.href, ingredients, instructions, description: '' };
 }
 
+// ── Article ──────────────────────────────────────────────────────────────────
+
+function extractArticle() {
+  const title = document.title || '';
+  const url = location.href;
+
+  // Try to get the main article text — prefer <article>, <main>, then body
+  const container = document.querySelector('article') ||
+    document.querySelector('main') ||
+    document.querySelector('[role="main"]') ||
+    document.body;
+
+  // Clone and strip nav/footer/aside/scripts/ads
+  const clone = container.cloneNode(true);
+  ['nav','footer','aside','script','style','iframe','[aria-hidden="true"]',
+   '.ad','.ads','.advertisement','.sidebar','.related','.comments','.comment-section']
+    .forEach(sel => clone.querySelectorAll(sel).forEach(el => el.remove()));
+
+  const text = clone.innerText
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 15000);
+
+  // Try to get description/byline
+  const description =
+    document.querySelector('meta[name="description"]')?.content ||
+    document.querySelector('meta[property="og:description"]')?.content || '';
+
+  const author =
+    document.querySelector('meta[name="author"]')?.content ||
+    document.querySelector('[rel="author"]')?.innerText ||
+    document.querySelector('.author,.byline')?.innerText || '';
+
+  const siteName =
+    document.querySelector('meta[property="og:site_name"]')?.content || location.hostname;
+
+  return { title, url, description, author, siteName, text };
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'ping') {
+    sendResponse({ ok: true });
+  }
   if (msg.action === 'extractRecipe') {
     sendResponse(extractRecipe());
+  }
+  if (msg.action === 'isRecipe') {
+    // Quick check: does the page have recipe schema or strong heuristic signals?
+    const hasSchema = [...document.querySelectorAll('script[type="application/ld+json"]')].some(s => {
+      try { return JSON.stringify(JSON.parse(s.textContent)).includes('"Recipe"'); } catch { return false; }
+    });
+    const hasHeuristic = !!(scrapeHeuristic());
+    sendResponse({ isRecipe: hasSchema || hasHeuristic });
   }
   if (msg.action === 'extractYouTube') {
     extractYouTubeData().then(sendResponse);
@@ -142,6 +192,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.action === 'isYouTube') {
     sendResponse({ isYouTube: isYouTube() });
+  }
+  if (msg.action === 'extractArticle') {
+    sendResponse(extractArticle());
   }
   return true;
 });

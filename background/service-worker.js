@@ -138,14 +138,14 @@ function buildYouTubeBlocks(data, summary) {
   return blocks;
 }
 
-async function summarizeTranscript(transcript, title, settings) {
+async function summarizeTranscript(transcript, title, settings, customPrompt = null) {
   if (!settings.aiEnabled || !settings.aiApiKey) return null;
 
-  const fullText = transcript.map(s => s.text).join(' ');
-  // Trim to ~12k chars to stay within model context limits
-  const trimmed = fullText.slice(0, 12000);
-
-  const prompt = `You are a helpful assistant that creates concise, useful notes from YouTube video transcripts.
+  let prompt = customPrompt;
+  if (!prompt) {
+    const fullText = transcript.map(s => s.text).join(' ');
+    const trimmed = fullText.slice(0, 12000);
+    prompt = `You are a helpful assistant that creates concise, useful notes from YouTube video transcripts.
 
 Video title: "${title}"
 
@@ -158,6 +158,7 @@ Create a structured summary with:
 3. Any important tips, warnings, or takeaways
 
 Keep it concise and practical. Do not include filler phrases like "In this video..." or "The creator says...". Just the useful information.`;
+  }
 
   try {
     if (settings.aiProvider === 'openai') {
@@ -306,6 +307,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true;
   }
+  if (msg.action === 'saveArticle') {
+    handleSaveArticle(msg.data).then(sendResponse).catch(err => {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  }
   if (msg.action === 'saveYouTube') {
     handleSaveYouTube(msg.data).then(sendResponse).catch(err => {
       sendResponse({ success: false, error: err.message });
@@ -438,4 +445,84 @@ async function handleSaveYouTube(data) {
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
   return { success: true, title: data.title, pageId, collection: 'YouTube Videos', hadSummary: !!summary, summaryError };
+}
+
+async function handleSaveArticle(data) {
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
+  if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
+
+  let summary = null;
+  let summaryError = null;
+
+  if (!data._skipAI && settings.aiEnabled && settings.aiApiKey) {
+    const prompt = `You are a helpful assistant that creates concise, useful summaries of web pages and articles.
+
+Title: ${data.title}
+URL: ${data.url}
+${data.author ? `Author: ${data.author}` : ''}
+${data.siteName ? `Site: ${data.siteName}` : ''}
+
+Page content:
+${data.text.slice(0, 12000)}
+
+Create a structured summary with:
+1. A 2-3 sentence overview of what this page covers
+2. Key points as bullet points (use "- " prefix)
+3. Any important facts, quotes, or takeaways
+
+Keep it concise and useful. Skip filler. Just the valuable information.`;
+
+    try {
+      summary = await summarizeTranscript([], data.title, settings, prompt);
+    } catch (e) {
+      summaryError = e.message;
+    }
+  }
+
+  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Saved Articles');
+  const blocks = buildArticleBlocks(data, summary);
+  const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
+
+  return { success: true, title: data.title, pageId, collection: 'Saved Articles', hadSummary: !!summary, summaryError };
+}
+
+function buildArticleBlocks(data, summary) {
+  const blocks = [];
+
+  // Source info
+  blocks.push({ type: 'paragraph', content: `🔗 ${data.url}` });
+  if (data.author) blocks.push({ type: 'paragraph', content: `✍️ ${data.author}` });
+  if (data.siteName) blocks.push({ type: 'paragraph', content: `🌐 ${data.siteName}` });
+
+  blocks.push({ type: 'divider', content: '' });
+
+  if (summary) {
+    blocks.push({ type: 'heading', content: '✨ AI Summary' });
+    const lines = summary.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ')) {
+        blocks.push({ type: 'todo', content: trimmed.slice(2) });
+      } else {
+        blocks.push({ type: 'paragraph', content: trimmed });
+      }
+    }
+    blocks.push({ type: 'divider', content: '' });
+  }
+
+  if (data.description) {
+    blocks.push({ type: 'heading', content: 'Description' });
+    blocks.push({ type: 'paragraph', content: data.description });
+    blocks.push({ type: 'divider', content: '' });
+  }
+
+  // Raw text excerpt (first ~2000 chars)
+  blocks.push({ type: 'heading', content: 'Page Content' });
+  const excerpt = data.text.slice(0, 2000);
+  const paragraphs = excerpt.split('\n\n').filter(p => p.trim().length > 30);
+  for (const p of paragraphs.slice(0, 8)) {
+    blocks.push({ type: 'paragraph', content: p.trim() });
+  }
+
+  return blocks;
 }
