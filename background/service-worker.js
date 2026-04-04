@@ -165,7 +165,7 @@ Keep it concise and practical. Do not include filler phrases like "In this video
     } else if (settings.aiProvider === 'anthropic') {
       return await callAnthropic(settings.aiApiKey, settings.aiModel || 'claude-haiku-3-5', prompt);
     } else if (settings.aiProvider === 'google') {
-      return await callGemini(settings.aiApiKey, settings.aiModel || 'gemini-1.5-flash', prompt);
+      return await callGemini(settings.aiApiKey, settings.aiModel || 'gemini-2.5-flash', prompt);
     }
     throw new Error('No AI provider selected.');
   } catch (e) {
@@ -285,7 +285,7 @@ ${rawData.html}`;
       const d = await res.json();
       text = d.content[0].text;
     } else if (settings.aiProvider === 'google') {
-      text = await callGemini(settings.aiApiKey, settings.aiModel || 'gemini-1.5-flash', prompt);
+      text = await callGemini(settings.aiApiKey, settings.aiModel || 'gemini-2.5-flash', prompt);
     }
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
