@@ -104,7 +104,7 @@ function buildYouTubeBlocks(data, summary) {
     const paragraphs = summary.split(/\n+/).filter(Boolean);
     for (const p of paragraphs) {
       if (p.startsWith('- ') || p.startsWith('• ')) {
-        blocks.push({ type: 'text', content: p });
+        blocks.push({ type: 'bullet_list', content: p.replace(/^[-•] /, '') });
       } else {
         blocks.push({ type: 'text', content: p });
       }
@@ -525,12 +525,12 @@ function buildArticleBlocks(data, summary) {
   blocks.push({ type: 'divider', content: '' });
 
   if (summary) {
-    blocks.push({ type: 'heading', content: '✨ AI Summary' });
+    blocks.push({ type: 'heading2', content: '✨ AI Summary' });
     const lines = summary.split('\n').filter(l => l.trim());
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('- ')) {
-        blocks.push({ type: 'todo', content: trimmed.slice(2) });
+        blocks.push({ type: 'bullet_list', content: trimmed.slice(2) });
       } else {
         blocks.push({ type: 'text', content: trimmed });
       }
@@ -539,13 +539,13 @@ function buildArticleBlocks(data, summary) {
   }
 
   if (data.description) {
-    blocks.push({ type: 'heading', content: 'Description' });
+    blocks.push({ type: 'heading2', content: 'Description' });
     blocks.push({ type: 'text', content: data.description });
     blocks.push({ type: 'divider', content: '' });
   }
 
   // Raw text excerpt (first ~2000 chars)
-  blocks.push({ type: 'heading', content: 'Page Content' });
+  blocks.push({ type: 'heading2', content: 'Page Content' });
   const excerpt = data.text.slice(0, 2000);
   const paragraphs = excerpt.split('\n\n').filter(p => p.trim().length > 30);
   for (const p of paragraphs.slice(0, 8)) {
