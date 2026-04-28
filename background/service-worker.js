@@ -26,11 +26,15 @@ async function parchmentRequest(apiKey, body) {
   return res.json();
 }
 
-async function getOrCreateCollection(apiKey, name) {
-  const { collections } = await parchmentRequest(apiKey, { action: 'list_collections' });
-  const existing = collections.find(c => c.name.toLowerCase() === name.toLowerCase());
+async function getOrCreateCollection(apiKey, name, workspaceId) {
+  const body = { action: 'list_collections' };
+  if (workspaceId) body.workspace_id = workspaceId;
+  const { collections } = await parchmentRequest(apiKey, body);
+  const existing = (collections || []).find(c => c.name.toLowerCase() === name.toLowerCase() && (!workspaceId || c.workspace_id === workspaceId));
   if (existing) return existing.id;
-  const created = await parchmentRequest(apiKey, { action: 'create_collection', name });
+  const createBody = { action: 'create_collection', name };
+  if (workspaceId) createBody.workspace_id = workspaceId;
+  const created = await parchmentRequest(apiKey, createBody);
   return created.collection.id;
 }
 
@@ -104,9 +108,9 @@ function buildYouTubeBlocks(data, summary) {
     const paragraphs = summary.split(/\n+/).filter(Boolean);
     for (const p of paragraphs) {
       if (p.startsWith('- ') || p.startsWith('• ')) {
-        blocks.push({ type: 'bullet_list', content: p.replace(/^[-•] /, '') });
+        blocks.push({ type: 'bullet_list', content: markdownToStyledJson(p.replace(/^[-•] /, '')) });
       } else {
-        blocks.push({ type: 'text', content: p });
+        blocks.push({ type: 'text', content: markdownToStyledJson(p) });
       }
     }
     blocks.push({ type: 'divider' });
@@ -381,7 +385,7 @@ async function handleFetchTranscript(baseUrl) {
 }
 
 async function handleSaveRecipe(extracted, tabId) {
-  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel', 'workspaceId']);
   if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
 
   let recipe;
@@ -397,14 +401,14 @@ async function handleSaveRecipe(extracted, tabId) {
     recipe.url = extracted.url || '';
   }
 
-  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Recipes');
+  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Recipes', settings.workspaceId || null);
   const blocks = buildRecipeBlocks(recipe);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, recipe.name, blocks);
   return { success: true, title: recipe.name, pageId, collection: 'Recipes' };
 }
 
 async function handleSaveYouTube(data) {
-  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel', 'workspaceId']);
   if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
   if (!settings.transcriptApiKey) return { success: false, error: 'No TranscriptAPI key set. Add one in Settings to save YouTube videos.' };
 
@@ -443,7 +447,7 @@ async function handleSaveYouTube(data) {
     }
   }
 
-  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'YouTube Videos');
+  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'YouTube Videos', settings.workspaceId || null);
   const blocks = buildYouTubeBlocks({ ...data, transcript: wantTranscript ? transcript : [] }, summary);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
@@ -451,7 +455,7 @@ async function handleSaveYouTube(data) {
 }
 
 async function handleSaveArticle(data) {
-  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel']);
+  const settings = await chrome.storage.sync.get(['parchmentApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel', 'workspaceId']);
   if (!settings.parchmentApiKey) return { success: false, error: 'No Parchment API key set. Open Settings to add one.' };
 
   // If AI is enabled, ask it whether this is a recipe first
@@ -471,7 +475,7 @@ ${snippet}`;
         // It's a recipe — run AI recipe extraction instead
         const recipeResult = await extractRecipeWithAI(data, settings);
         if (recipeResult) {
-          const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Recipes');
+          const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Recipes', settings.workspaceId || null);
           const blocks = buildRecipeBlocks(recipeResult);
           const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, recipeResult.name || data.title, blocks);
           return { success: true, title: recipeResult.name || data.title, pageId, collection: 'Recipes', hadSummary: true };
@@ -510,11 +514,30 @@ Keep it concise and useful. Skip filler. Just the valuable information.`;
     }
   }
 
-  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Saved Articles');
+  const collectionId = await getOrCreateCollection(settings.parchmentApiKey, 'Saved Articles', settings.workspaceId || null);
   const blocks = buildArticleBlocks(data, summary);
   const pageId = await savePageWithBlocks(settings.parchmentApiKey, collectionId, data.title, blocks);
 
   return { success: true, title: data.title, pageId, collection: 'Saved Articles', hadSummary: !!summary, summaryError };
+}
+
+function markdownToStyledJson(text) {
+  // Convert inline markdown to Parchment's styled JSON span format
+  // e.g. "**bold** normal" → [{text:"bold",bold:true},{text:" normal"}]
+  const spans = [];
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+)/g;
+  let match;
+  while ((match = re.exec(text)) !== null) {
+    if (match[1] !== undefined) spans.push({ text: match[1], bold: true });
+    else if (match[2] !== undefined) spans.push({ text: match[2], italic: true });
+    else if (match[3] !== undefined) spans.push({ text: match[3], code: true });
+    else if (match[4] !== undefined) spans.push({ text: match[4] });
+  }
+  // If no inline formatting found, return plain string (more efficient)
+  if (spans.length === 1 && !spans[0].bold && !spans[0].italic && !spans[0].code) {
+    return spans[0].text;
+  }
+  return JSON.stringify(spans);
 }
 
 function buildArticleBlocks(data, summary) {
@@ -533,17 +556,17 @@ function buildArticleBlocks(data, summary) {
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('### ')) {
-        blocks.push({ type: 'heading3', content: trimmed.slice(4) });
+        blocks.push({ type: 'heading3', content: markdownToStyledJson(trimmed.slice(4)) });
       } else if (trimmed.startsWith('## ')) {
-        blocks.push({ type: 'heading2', content: trimmed.slice(3) });
+        blocks.push({ type: 'heading2', content: markdownToStyledJson(trimmed.slice(3)) });
       } else if (trimmed.startsWith('# ')) {
-        blocks.push({ type: 'heading1', content: trimmed.slice(2) });
+        blocks.push({ type: 'heading1', content: markdownToStyledJson(trimmed.slice(2)) });
       } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        blocks.push({ type: 'bullet_list', content: trimmed.slice(2) });
+        blocks.push({ type: 'bullet_list', content: markdownToStyledJson(trimmed.slice(2)) });
       } else if (/^\d+\.\s/.test(trimmed)) {
-        blocks.push({ type: 'numbered_list', content: trimmed.replace(/^\d+\.\s/, '') });
+        blocks.push({ type: 'numbered_list', content: markdownToStyledJson(trimmed.replace(/^\d+\.\s/, '')) });
       } else {
-        blocks.push({ type: 'text', content: trimmed });
+        blocks.push({ type: 'text', content: markdownToStyledJson(trimmed) });
       }
     }
   }

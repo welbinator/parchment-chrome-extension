@@ -1,0 +1,20 @@
+name: Build Staging Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build staging zip
+        run: bash build.sh staging
+
+      - name: Upload staging zip as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parchment-extension-staging
+          path: dist/parchment-extension-staging.zip
+          retention-days: 7

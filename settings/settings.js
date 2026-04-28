@@ -44,6 +44,27 @@ function setStatus(el, type, msg) {
   el.className = `key-status ${type}`;
 }
 
+async function fetchAndPopulateWorkspaces(key, selectedId) {
+  try {
+    const res = await fetch('https://theparchment.app/functions/v1/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ action: 'list_workspaces' }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const workspaces = data.workspaces || [];
+    if (workspaces.length === 0) return;
+    const select = document.getElementById('workspaceSelect');
+    select.innerHTML = workspaces.map(w =>
+      `<option value="${w.id}" ${w.id === selectedId ? 'selected' : ''}>${w.name}</option>`
+    ).join('');
+    document.getElementById('workspaceField').style.display = 'block';
+  } catch (e) {
+    // silently ignore
+  }
+}
+
 document.getElementById('testParchment').addEventListener('click', async () => {
   const key = document.getElementById('parchmentApiKey').value.trim();
   const status = document.getElementById('parchmentStatus');
@@ -55,7 +76,10 @@ document.getElementById('testParchment').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json', 'x-api-key': key },
       body: JSON.stringify({ action: 'list_collections' }),
     });
-    if (res.ok) setStatus(status, 'ok', '✓ Key is valid');
+    if (res.ok) {
+      setStatus(status, 'ok', '✓ Key is valid');
+      fetchAndPopulateWorkspaces(key, null);
+    }
     else setStatus(status, 'err', `✗ Invalid key (${res.status})`);
   } catch (e) {
     setStatus(status, 'err', `✗ Network error: ${e.message}`);
@@ -121,9 +145,12 @@ document.getElementById('testAI').addEventListener('click', async () => {
 
 async function loadSettings() {
   const s = await chrome.storage.sync.get([
-    'parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel'
+    'parchmentApiKey', 'transcriptApiKey', 'aiEnabled', 'aiProvider', 'aiApiKey', 'aiModel', 'workspaceId'
   ]);
-  if (s.parchmentApiKey) document.getElementById('parchmentApiKey').value = s.parchmentApiKey;
+  if (s.parchmentApiKey) {
+    document.getElementById('parchmentApiKey').value = s.parchmentApiKey;
+    fetchAndPopulateWorkspaces(s.parchmentApiKey, s.workspaceId || null);
+  }
   if (s.transcriptApiKey) document.getElementById('transcriptApiKey').value = s.transcriptApiKey;
   if (s.aiEnabled) {
     aiEnabled.checked = true;
@@ -151,7 +178,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     return;
   }
 
-  await chrome.storage.sync.set({ parchmentApiKey, transcriptApiKey, aiEnabled: enabled, aiProvider: provider, aiModel: model, aiApiKey });
+  const workspaceId = document.getElementById('workspaceSelect').value || '';
+  await chrome.storage.sync.set({ parchmentApiKey, transcriptApiKey, aiEnabled: enabled, aiProvider: provider, aiModel: model, aiApiKey, workspaceId });
   showToast('Settings saved!', 'success');
 });
 

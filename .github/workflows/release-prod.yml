@@ -1,0 +1,31 @@
+name: Build Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.4.0)'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update manifest version
+        run: |
+          sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.event.inputs.version }}\"/" manifest.json
+
+      - name: Build production zip
+        run: bash build.sh prod
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          files: dist/parchment-extension.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
