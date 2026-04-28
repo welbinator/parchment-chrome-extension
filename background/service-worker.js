@@ -532,8 +532,16 @@ function buildArticleBlocks(data, summary) {
     const lines = summary.split('\n').filter(l => l.trim());
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed.startsWith('- ')) {
+      if (trimmed.startsWith('### ')) {
+        blocks.push({ type: 'heading3', content: trimmed.slice(4) });
+      } else if (trimmed.startsWith('## ')) {
+        blocks.push({ type: 'heading2', content: trimmed.slice(3) });
+      } else if (trimmed.startsWith('# ')) {
+        blocks.push({ type: 'heading1', content: trimmed.slice(2) });
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         blocks.push({ type: 'bullet_list', content: trimmed.slice(2) });
+      } else if (/^\d+\.\s/.test(trimmed)) {
+        blocks.push({ type: 'numbered_list', content: trimmed.replace(/^\d+\.\s/, '') });
       } else {
         blocks.push({ type: 'text', content: trimmed });
       }
